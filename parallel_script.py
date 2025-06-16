@@ -188,6 +188,18 @@ class GNN(nn.Module):
         h = self.enc(data.x, data.edge_index, data.edge_attr)
         return self.cls(h, data.edge_index, data.edge_attr, data.batch)
 
+def _collect_preds(model, loader, device="cpu"):
+    model.eval()
+    probs, labels = [], []
+    with torch.no_grad():
+        for batch in loader:
+            batch = batch.to(device)
+            logit = model(batch)
+            mask = batch.edge_index[0] < batch.edge_index[1]  # undirected collapse
+            probs.append(torch.sigmoid(logit[mask]).cpu())
+            labels.append(batch.y[mask].cpu())
+    return torch.cat(probs), torch.cat(labels)
+
 ################################################################################
 # Training utilities ----------------------------------------------------------
 ################################################################################
@@ -257,9 +269,26 @@ def main(args):
             best_auc = val_auc
             torch.save(model.state_dict(), "best_model.pt")
 
-    model.load_state_dict(torch.load("best_model.pt"))
+    # model.load_state_dict(torch.load("best_model.pt"))
     _, test_auc = _run_epoch(model, test_loader, criterion, device=device)
     print(f"Test AUC = {test_auc:.3f}")
+
+
+    import matplotlib.pyplot as plt
+    from sklearn.metrics import classification_report, roc_curve
+    probs, y_true = _collect_preds(model, test_loader, device)
+    y_pred = (probs > 0.50).int()  # threshold can be tuned
+
+    print("\nPrecision / recall / F1 on test bonds:")
+    print(classification_report(y_true.numpy(), y_pred.numpy(), digits=3))
+
+    fpr, tpr, _ = roc_curve(y_true.numpy(), probs.numpy())
+    plt.figure(figsize=(7, 6))
+    plt.plot(fpr, tpr, lw=2, label=f"AUC = {test_auc:.3f}")
+    plt.plot([0, 1], [0, 1], "--", color="grey")
+    plt.xlabel("False Positive Rate");  plt.ylabel("True Positive Rate")
+    plt.title("ROC – Reaction-Centre Classifier");  plt.legend();  plt.grid(alpha=.3)
+    plt.show()
 
 ################################################################################
 # CLI -------------------------------------------------------------------------
