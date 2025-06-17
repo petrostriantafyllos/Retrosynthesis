@@ -139,7 +139,6 @@ class CentreDataset(InMemoryDataset):
 
     # ----- heavy I/O and RDKit in parallel -----
     def _parse_pairs(self):
-        print("Called fucking tjwO[IFJPO[ZSD J[OIWEJT OP]we3tp] WI3T]")
         rows = list(csv.DictReader(open(self.csv_path)))
         print(f"CSV rows: {len(rows)} — RDKit parsing on {self.jobs} processes …")
         pairs = Parallel(n_jobs=self.jobs)(delayed(_row_to_pair)(r) for r in rows)
@@ -195,9 +194,9 @@ def _collect_preds(model, loader, device="cpu"):
         for batch in loader:
             batch = batch.to(device)
             logit = model(batch)
-            mask = batch.edge_index[0] < batch.edge_index[1]  # undirected collapse
-            probs.append(torch.sigmoid(logit[mask]).cpu())
-            labels.append(batch.y[mask].cpu())
+            # mask = batch.edge_index[0] < batch.edge_index[1]  # undirected collapse
+            probs.append(torch.sigmoid(logit).cpu())
+            labels.append(batch.y.cpu())
     return torch.cat(probs), torch.cat(labels)
 
 ################################################################################
@@ -237,6 +236,103 @@ def _run_epoch(model, loader, criterion, opt=None, device="cpu"):
             return tot_loss / len(loader.dataset), _roc_auc(l, p)
         return tot_loss / len(loader.dataset), 0.0
 
+
+def run_beam_search_pipeline(model, loader, beam_size, device="cpu"):
+    """
+    Runs beam search inference on a dataset and returns structured results.
+    """
+    model.eval()
+    results = []
+    with torch.no_grad():
+        for i, data in enumerate(tqdm.tqdm(loader.dataset, desc="Beam Search")):
+            # The loader's dataset gives individual data objects.
+            # We need to manually create a batch for the model.
+            data = data.to(device)
+            data.batch = torch.zeros(data.num_nodes, dtype=torch.long, device=device)
+
+            bond_logits = model(data)
+            top_hypotheses = beam_search_bond_sets(bond_logits, data.edge_index, beam_size=beam_size)
+            
+            # Get true bond breaks for comparison
+            true_bonds_mask = data.y.view(-1) == 1
+            true_bonds_indices = data.edge_index.t()[true_bonds_mask]
+            # Filter for unique bonds (i < j)
+            unique_true_bonds_mask = true_bonds_indices[:, 0] < true_bonds_indices[:, 1]
+            true_bonds = {tuple(bond.tolist()) for bond in true_bonds_indices[unique_true_bonds_mask]}
+
+            results.append({
+                "example_index": i,
+                "num_atoms": data.num_nodes,
+                "num_bonds": data.num_edges // 2,
+                "true_bonds": true_bonds,
+                "hypotheses": top_hypotheses
+            })
+    return results
+    
+
+import itertools
+import torch.nn.functional as F
+
+def beam_search_bond_sets(logits: torch.Tensor, edge_index: torch.Tensor, beam_size: int = 5):
+    """
+    Performs a hypothesis search to find the most likely sets of bond breaks.
+
+    This is not a traditional sequence-decoding beam search, but a search
+    for the best set of bond cleavages.
+
+    Args:
+        logits (torch.Tensor): The raw output logits from the model for each edge.
+        edge_index (torch.Tensor): The edge_index of the graph.
+        beam_size (int): The number of top hypotheses to return.
+
+    Returns:
+        A list of tuples, where each tuple contains (score, bond_indices).
+        The list is sorted by score in descending order.
+    """
+    # Use logsigmoid to get log probabilities, which are numerically stable
+    log_probs = F.logsigmoid(logits.squeeze())
+
+    # --- Step 1: Handle undirected edges ---
+    # We only want to consider each bond once (e.g., i->j, not j->i)
+    # The mask ensures we only look at edges where source index < target index
+    mask = edge_index[0] < edge_index[1]
+    unique_edge_indices = torch.arange(len(logits))[mask]
+    unique_log_probs = log_probs[mask]
+
+    # Get the original bond indices (i, j) for easier interpretation
+    bonds = edge_index.t()[mask]
+
+    # --- Step 2: Generate single-bond hypotheses ---
+    # Sort all unique bonds by their log probability
+    sorted_indices = torch.argsort(unique_log_probs, descending=True)
+
+    hypotheses = []
+    # Add the top `beam_size` single bonds as initial hypotheses
+    for i in range(min(beam_size, len(sorted_indices))):
+        idx = sorted_indices[i]
+        score = unique_log_probs[idx].item()
+        bond_tuple = tuple(bonds[idx].tolist())
+        hypotheses.append((score, {bond_tuple})) # Store hypothesis as a set of bonds
+
+    # --- Step 3: Generate double-bond hypotheses ---
+    # Consider combinations of the top N bonds to create double-break hypotheses
+    # Let's use a slightly larger pool (e.g., 2*beam_size) for combinations
+    pool_size = min(2 * beam_size, len(sorted_indices))
+    top_bond_pool_indices = sorted_indices[:pool_size]
+
+    for combo in itertools.combinations(top_bond_pool_indices, 2):
+        idx1, idx2 = combo
+        # Score is the sum of log probabilities
+        score = (unique_log_probs[idx1] + unique_log_probs[idx2]).item()
+        bond1_tuple = tuple(bonds[idx1].tolist())
+        bond2_tuple = tuple(bonds[idx2].tolist())
+        hypotheses.append((score, {bond1_tuple, bond2_tuple}))
+
+    # --- Step 4: Rank all hypotheses and return the best ones ---
+    hypotheses.sort(key=lambda x: x[0], reverse=True)
+
+    return hypotheses[:beam_size]
+
 ################################################################################
 # Main training loop ----------------------------------------------------------
 ################################################################################
@@ -258,20 +354,42 @@ def main(args):
     pos = sum(int(d.y.sum()) for d in ds)
     neg = sum(int(d.y.numel() - d.y.sum()) for d in ds)
     criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([neg/pos], device=device))
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
 
     best_auc = 0.0
-    for epoch in range(1, args.epochs + 1):
-        tr_loss = _run_epoch(model, train_loader, criterion, opt=optimizer, device=device)
-        val_loss, val_auc = _run_epoch(model, val_loader, criterion, device=device)
-        print(f"Ep{epoch:02d}: train {tr_loss:.4f}  val {val_loss:.4f}  AUC {val_auc:.3f}")
-        if val_auc > best_auc:
-            best_auc = val_auc
-            torch.save(model.state_dict(), "best_model.pt")
+    if not args.no_train:
+        print("Starting training...")
+        for epoch in range(1, args.epochs + 1):
+            tr_loss = _run_epoch(model, train_loader, criterion, opt=optimizer, device=device)
+            val_loss, val_auc = _run_epoch(model, val_loader, criterion, device=device)
+            print(f"Ep{epoch:02d}: train {tr_loss:.4f}  val {val_loss:.4f}  AUC {val_auc:.3f}")
+            if val_auc > best_auc:
+                best_auc = val_auc
+                torch.save(model.state_dict(), "best_model.pt")
+        print("Training finished. Best model saved to best_model.pt")
 
-    # model.load_state_dict(torch.load("best_model.pt"))
+
+    print("\nLoading best model for evaluation...")
+    model.load_state_dict(torch.load("best_model.pt"))
     _, test_auc = _run_epoch(model, test_loader, criterion, device=device)
     print(f"Test AUC = {test_auc:.3f}")
+
+    if args.run_beam_search:
+        print("\n" + "="*50)
+        print("RUNNING BEAM SEARCH PIPELINE")
+        print("="*50)
+        
+        beam_results = run_beam_search_pipeline(model, test_loader, args.beam_size, device=device)
+
+        # Print results for a few examples
+        for i in range(min(3, len(beam_results))):
+            res = beam_results[i]
+            print(f"\n--- Example Molecule {res['example_index']+1} (has {res['num_atoms']} atoms and {res['num_bonds']} bonds) ---")
+            print(f"True reaction center: {res['true_bonds']}")
+            print(f"Top {args.beam_size} Reaction Center Hypotheses (Score, {{Bond(s)}}):")
+            for score, bond_set in res['hypotheses']:
+                formatted_bonds = ", ".join([str(bond) for bond in bond_set])
+                print(f"  Score: {score:.4f}, Bonds: {{{formatted_bonds}}}")
 
 
     import matplotlib.pyplot as plt
@@ -300,4 +418,7 @@ if __name__ == "__main__":
     ap.add_argument("--epochs", type=int, default=25)
     ap.add_argument("--jobs", type=int, default=None, help="Parallel workers (default: all cores)")
     ap.add_argument("--cpu", action="store_true", help="Force CPU even if CUDA available")
+    ap.add_argument("--no-train", action="store_true", help="Skip training and load best_model.pt")
+    ap.add_argument("--run-beam-search", action="store_true", help="Run beam search pipeline on the test set")
+    ap.add_argument("--beam-size", type=int, default=5, help="Beam size for hypothesis search")
     main(ap.parse_args())
