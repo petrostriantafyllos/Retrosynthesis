@@ -9,10 +9,11 @@ Only speed-related edits were made; no other behaviour changes.
 
 from __future__ import annotations
 
-import argparse, csv, os, re, sys
+import argparse, csv, os, re, sys, random
 from pathlib import Path
 from typing import List, Tuple, Sequence
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -23,6 +24,7 @@ from rdkit import Chem
 from rdkit.Chem import rdChemReactions
 from joblib import Parallel, delayed
 import tqdm.auto as tqdm
+from sklearn.metrics import classification_report, roc_curve, precision_recall_curve, roc_auc_score
 
 ################################################################################
 # Atom / bond features --------------------------------------------------------
@@ -162,79 +164,101 @@ class CentreDataset(InMemoryDataset):
 ################################################################################
 
 class Encoder(nn.Module):
-    def __init__(self, node_dim: int, edge_dim: int, hidden: int = 128):
+    def __init__(self, node_dim: int, edge_dim: int, hidden: int = 128, dropout: float = 0.1):
         super().__init__()
         self.t1 = TransformerConv(node_dim, hidden // 8, heads=8, edge_dim=edge_dim)
         self.t2 = TransformerConv(hidden, hidden, concat=False, edge_dim=edge_dim)
+        self.dropout = nn.Dropout(dropout)
     def forward(self, x, ei, ea):
-        return self.t2(F.leaky_relu(self.t1(x, ei, ea)), ei, ea)
+        x = F.leaky_relu(self.t1(x, ei, ea))
+        x = self.dropout(x)
+        return self.t2(x, ei, ea)
 
 class LinkClassifier(nn.Module):
-    def __init__(self, node_dim: int, edge_dim: int):
+    def __init__(self, node_dim: int, edge_dim: int, dropout: float = 0.1):
         super().__init__()
-        self.mlp = nn.Sequential(nn.Linear(node_dim * 3 + edge_dim, 128), nn.ReLU(), nn.Linear(128, 1))
+        self.mlp = nn.Sequential(
+            nn.Linear(node_dim * 3 + edge_dim, 128),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(128, 1)
+        )
     def forward(self, h, ei, ea, batch):
         s, t = ei
         g = global_mean_pool(h, batch)[batch[s]]
         return self.mlp(torch.cat([h[s], h[t], ea, g], dim=-1))
 
 class GNN(nn.Module):
-    def __init__(self, node_dim: int, edge_dim: int, hidden: int = 128):
+    def __init__(self, node_dim: int, edge_dim: int, hidden: int = 128, dropout: float = 0.1):
         super().__init__()
-        self.enc = Encoder(node_dim, edge_dim, hidden)
-        self.cls = LinkClassifier(hidden, edge_dim)
+        self.enc = Encoder(node_dim, edge_dim, hidden, dropout=dropout)
+        self.cls = LinkClassifier(hidden, edge_dim, dropout=dropout)
     def forward(self, data: Data):
         h = self.enc(data.x, data.edge_index, data.edge_attr)
-        return self.cls(h, data.edge_index, data.edge_attr, data.batch)
-
-def _collect_preds(model, loader, device="cpu"):
-    model.eval()
-    probs, labels = [], []
-    with torch.no_grad():
-        for batch in loader:
-            batch = batch.to(device)
-            logit = model(batch)
-            # mask = batch.edge_index[0] < batch.edge_index[1]  # undirected collapse
-            probs.append(torch.sigmoid(logit).cpu())
-            labels.append(batch.y.cpu())
-    return torch.cat(probs), torch.cat(labels)
+        logits = self.cls(h, data.edge_index, data.edge_attr, data.batch)
+        return logits.squeeze(-1)
 
 ################################################################################
 # Training utilities ----------------------------------------------------------
 ################################################################################
 
-def _roc_auc(y_true: torch.Tensor, y_prob: torch.Tensor) -> float:
-    from sklearn.metrics import roc_auc_score
-    y_numpy, p_numpy = y_true.numpy(), y_prob.numpy()
-    if y_numpy.sum() in (0, len(y_numpy)):
-        return 0.0
-    return float(roc_auc_score(y_numpy, p_numpy))
+def get_loss_fn(pos_weight: float, use_focal=False, gamma=2.0):
+    if use_focal:
+        class FocalLoss(nn.Module):
+            def __init__(self, alpha, gamma):
+                super().__init__()
+                self.alpha = alpha
+                self.gamma = gamma
+            def forward(self, logits, target):
+                bce = F.binary_cross_entropy_with_logits(logits, target, reduction="none", pos_weight=self.alpha)
+                p_t = torch.exp(-bce)
+                loss = (self.alpha * (1 - p_t) ** self.gamma * bce).mean()
+                return loss
+        return FocalLoss(pos_weight, gamma)
+    else:
+        return nn.BCEWithLogitsLoss(pos_weight=torch.tensor([pos_weight]))
 
+def train_one(model, loader, optimizer, loss_fn, device):
+    model.train()
+    total_loss = 0.0
+    for batch in loader:
+        batch = batch.to(device)
+        optimizer.zero_grad()
+        logits = model(batch)
+        loss = loss_fn(logits, batch.y.view(-1))
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item() * batch.num_graphs
+    return total_loss / len(loader.dataset)
 
-def _run_epoch(model, loader, criterion, opt=None, device="cpu"):
-    train = opt is not None
-    model.train() if train else model.eval()
-    tot_loss, preds, labels = 0.0, [], []
-    with torch.set_grad_enabled(train):
+def eval_model(model, loader, device, mc_dropout=0):
+    model.eval()
+    if mc_dropout > 0:
+        for module in model.modules():
+            if module.__class__.__name__.startswith('Dropout'):
+                module.train()
+
+    y_true, y_scores = [], []
+    iters = mc_dropout if mc_dropout > 0 else 1
+    with torch.no_grad():
         for batch in loader:
             batch = batch.to(device)
-            logit = model(batch)
-            loss = criterion(logit, batch.y)
-            if train:
-                opt.zero_grad(); loss.backward(); opt.step()
-            else:
-                # collapse undirected duplicates for metrics
-                mask = batch.edge_index[0] < batch.edge_index[1]
-                preds.append(torch.sigmoid(logit[mask]).cpu())
-                labels.append(batch.y[mask].cpu())
-            tot_loss += loss.item() * batch.num_graphs
-    if train:
-        return tot_loss / len(loader.dataset)
-    else:
-        if labels:
-            p = torch.cat(preds); l = torch.cat(labels)
-            return tot_loss / len(loader.dataset), _roc_auc(l, p)
-        return tot_loss / len(loader.dataset), 0.0
+            logits_all = []
+            for _ in range(iters):
+                logits_all.append(model(batch))
+            logits_all = torch.stack(logits_all)  # [T, N]
+            logits_mean = logits_all.mean(0)
+            y_scores.append(torch.sigmoid(logits_mean).cpu())
+            y_true.append(batch.y.view(-1).cpu())
+    y_true = torch.cat(y_true)
+    y_scores = torch.cat(y_scores)
+    return y_true.numpy(), y_scores.numpy()
+
+def tune_threshold(y_true, y_score, beta=0.5):
+    precision, recall, thresh = precision_recall_curve(y_true, y_score)
+    f_beta = (1 + beta**2) * (precision * recall) / (beta**2 * precision + recall + 1e-8)
+    idx = np.nanargmax(f_beta)
+    return thresh[idx]
 
 
 def run_beam_search_pipeline(model, loader, beam_size, device="cpu"):
@@ -342,49 +366,92 @@ def main(args):
     ds = CentreDataset(args.csv, args.jobs or os.cpu_count())
 
     n_tr, n_val = int(0.8 * len(ds)), int(0.1 * len(ds))
-    train_ds, val_ds, test_ds = torch.utils.data.random_split(ds, [n_tr, n_val, len(ds) - n_tr - n_val])
+    train_ds, val_ds, test_ds = torch.utils.data.random_split(ds, [n_tr, n_val, len(ds) - n_tr - n_val], generator=torch.Generator().manual_seed(42))
 
-    train_loader = DataLoader(train_ds, batch_size=32, shuffle=True)
-    val_loader   = DataLoader(val_ds, batch_size=64)
-    test_loader  = DataLoader(test_ds, batch_size=64)
+    train_loader = DataLoader(train_ds, batch_size=args.batch, shuffle=True)
+    val_loader   = DataLoader(val_ds, batch_size=args.batch)
+    test_loader  = DataLoader(test_ds, batch_size=args.batch)
 
-    hidden = 128
-    model = GNN(ds.num_node_features, ds.num_edge_features, hidden=hidden).to(device)
+    pos = sum(int(d.y.sum()) for d in train_ds)
+    neg = sum(int(d.y.numel() - d.y.sum()) for d in train_ds)
+    pos_weight = neg / pos if pos > 0 else 1.0
 
-    pos = sum(int(d.y.sum()) for d in ds)
-    neg = sum(int(d.y.numel() - d.y.sum()) for d in ds)
-    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([neg/pos], device=device))
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
+    ensemble_scores, ensemble_true = [], None
+    thresholds = []
 
-    best_auc = 0.0
-    if not args.no_train:
-        print("Starting training...")
-        for epoch in range(1, args.epochs + 1):
-            tr_loss = _run_epoch(model, train_loader, criterion, opt=optimizer, device=device)
-            val_loss, val_auc = _run_epoch(model, val_loader, criterion, device=device)
-            print(f"Ep{epoch:02d}: train {tr_loss:.4f}  val {val_loss:.4f}  AUC {val_auc:.3f}")
-            if val_auc > best_auc:
-                best_auc = val_auc
-                torch.save(model.state_dict(), "best_model.pt")
-        print("Training finished. Best model saved to best_model.pt")
+    for seed in range(args.n_ensemble):
+        print(f"\n===== ENSEMBLE MEMBER {seed+1}/{args.n_ensemble} (seed {seed}) =====")
+        torch.manual_seed(seed)
+        random.seed(seed)
+        np.random.seed(seed)
 
+        model = GNN(ds.num_node_features, ds.num_edge_features, hidden=args.hidden, dropout=args.dropout).to(device)
+        optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
+        loss_fn = get_loss_fn(pos_weight, use_focal=args.focal).to(device)
 
-    print("\nLoading best model for evaluation...")
-    model.load_state_dict(torch.load("best_model.pt"))
-    _, test_auc = _run_epoch(model, test_loader, criterion, device=device)
-    print(f"Test AUC = {test_auc:.3f}")
+        best_val_auc = 0.0
+        patience = 0
+        best_state = None
+
+        if not args.no_train:
+            print("Starting training...")
+            for epoch in range(1, args.epochs + 1):
+                tr_loss = train_one(model, train_loader, optimizer, loss_fn, device=device)
+                y_v, s_v = eval_model(model, val_loader, device)
+                val_auc = roc_auc_score(y_v, s_v)
+                print(f"Ep{epoch:02d}: train_loss {tr_loss:.4f}  val_auc {val_auc:.3f}")
+
+                if val_auc > best_val_auc:
+                    best_val_auc = val_auc
+                    best_state = model.state_dict()
+                    patience = 0
+                else:
+                    patience += 1
+                    if patience >= args.early_stop:
+                        print(f"Early stopping at epoch {epoch}")
+                        break
+            
+            if best_state:
+                model.load_state_dict(best_state)
+            torch.save(model.state_dict(), f"best_model_seed{seed}.pt")
+            print(f"Best model for seed {seed} saved (val AUC: {best_val_auc:.3f})")
+        else:
+            model.load_state_dict(torch.load(f"best_model_seed{seed}.pt", map_location=device))
+
+        y_v, s_v = eval_model(model, val_loader, device, mc_dropout=args.mc)
+        thresh = tune_threshold(y_v, s_v, beta=args.beta)
+        thresholds.append(thresh)
+        print(f"Threshold for seed {seed} (F-beta={args.beta}): {thresh:.4f}")
+
+        y_t, s_t = eval_model(model, test_loader, device, mc_dropout=args.mc)
+        if ensemble_true is None:
+            ensemble_true = y_t
+        ensemble_scores.append(s_t)
+
+    final_thresh = np.mean(thresholds)
+    scores_mean = np.mean(ensemble_scores, axis=0)
+    scores_var = np.var(ensemble_scores, axis=0)
+    y_pred = (scores_mean >= final_thresh).astype(int)
+
+    print("\n===== ENSEMBLE RESULTS =====")
+    print(f"Using mean threshold: {final_thresh:.4f}")
+    test_auc = roc_auc_score(ensemble_true, scores_mean)
+    print(f"Test AUC: {test_auc:.3f}")
+    print(classification_report(ensemble_true, y_pred, digits=3))
+    np.savez("probabilities.npz", y=ensemble_true, p=scores_mean, var=scores_var)
+    print("Saved probabilities and variance to probabilities.npz")
 
     if args.run_beam_search:
         print("\n" + "="*50)
-        print("RUNNING BEAM SEARCH PIPELINE")
+        print("RUNNING BEAM SEARCH PIPELINE (on first ensemble model)")
         print("="*50)
-        
+        model.load_state_dict(torch.load("best_model_seed0.pt", map_location=device))
         beam_results = run_beam_search_pipeline(model, test_loader, args.beam_size, device=device)
 
         # Print results for a few examples
         for i in range(min(3, len(beam_results))):
             res = beam_results[i]
-            print(f"\n--- Example Molecule {res['example_index']+1} (has {res['num_atoms']} atoms and {res['num_bonds']} bonds) ---")
+            print(f"\n--- Example Molecule {res['example_index']} (has {res['num_atoms']} atoms and {res['num_bonds']} bonds) ---")
             print(f"True reaction center: {res['true_bonds']}")
             print(f"Top {args.beam_size} Reaction Center Hypotheses (Score, {{Bond(s)}}):")
             for score, bond_set in res['hypotheses']:
@@ -393,19 +460,12 @@ def main(args):
 
 
     import matplotlib.pyplot as plt
-    from sklearn.metrics import classification_report, roc_curve
-    probs, y_true = _collect_preds(model, test_loader, device)
-    y_pred = (probs > 0.50).int()  # threshold can be tuned
-
-    print("\nPrecision / recall / F1 on test bonds:")
-    print(classification_report(y_true.numpy(), y_pred.numpy(), digits=3))
-
-    fpr, tpr, _ = roc_curve(y_true.numpy(), probs.numpy())
+    fpr, tpr, _ = roc_curve(ensemble_true, scores_mean)
     plt.figure(figsize=(7, 6))
     plt.plot(fpr, tpr, lw=2, label=f"AUC = {test_auc:.3f}")
     plt.plot([0, 1], [0, 1], "--", color="grey")
     plt.xlabel("False Positive Rate");  plt.ylabel("True Positive Rate")
-    plt.title("ROC – Reaction-Centre Classifier");  plt.legend();  plt.grid(alpha=.3)
+    plt.title("ROC – Reaction-Centre Classifier (Ensemble)");  plt.legend();  plt.grid(alpha=.3)
     plt.show()
 
 ################################################################################
@@ -418,7 +478,16 @@ if __name__ == "__main__":
     ap.add_argument("--epochs", type=int, default=25)
     ap.add_argument("--jobs", type=int, default=None, help="Parallel workers (default: all cores)")
     ap.add_argument("--cpu", action="store_true", help="Force CPU even if CUDA available")
-    ap.add_argument("--no-train", action="store_true", help="Skip training and load best_model.pt")
+    ap.add_argument("--no-train", action="store_true", help="Skip training and load best_model_seedN.pt")
     ap.add_argument("--run-beam-search", action="store_true", help="Run beam search pipeline on the test set")
     ap.add_argument("--beam-size", type=int, default=5, help="Beam size for hypothesis search")
+    ap.add_argument("--batch", type=int, default=32)
+    ap.add_argument("--hidden", type=int, default=128)
+    ap.add_argument("--dropout", type=float, default=0.1)
+    ap.add_argument("--lr", type=float, default=1e-3)
+    ap.add_argument("--early_stop", type=int, default=15)
+    ap.add_argument("--n_ensemble", type=int, default=1, help="Number of models to train in ensemble")
+    ap.add_argument("--mc", type=int, default=0, help="MC-Dropout passes at test (0=off)")
+    ap.add_argument("--focal", action="store_true", help="Use Focal Loss instead of weighted BCE")
+    ap.add_argument("--beta", type=float, default=0.5, help="F-beta for threshold search")
     main(ap.parse_args())
