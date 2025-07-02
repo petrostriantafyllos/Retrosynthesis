@@ -1,0 +1,100 @@
+parallel_script_copy.py --csv data/dataSetB.csv --focal --epochs 100 --hidden 256 --batch 64 --name no_valenceseed0| Ep01: train_loss 0.3596  val_auc 0.446 pos_f1 0.303
+seed0| Ep02: train_loss 0.2923  val_auc 0.501 pos_f1 0.327
+seed0| Ep03: train_loss 0.2708  val_auc 0.537 pos_f1 0.305
+seed0| Ep04: train_loss 0.2596  val_auc 0.557 pos_f1 0.298
+seed0| Ep05: train_loss 0.2504  val_auc 0.553 pos_f1 0.347
+seed0| Ep06: train_loss 0.2444  val_auc 0.566 pos_f1 0.315
+seed0| Ep07: train_loss 0.2404  val_auc 0.559 pos_f1 0.345
+seed0| Ep08: train_loss 0.2377  val_auc 0.585 pos_f1 0.335
+seed0| Ep09: train_loss 0.2336  val_auc 0.586 pos_f1 0.356
+seed0| Ep10: train_loss 0.2298  val_auc 0.592 pos_f1 0.359
+seed0| Ep11: train_loss 0.2284  val_auc 0.589 pos_f1 0.337
+seed0| Ep12: train_loss 0.2256  val_auc 0.590 pos_f1 0.371
+seed0| Ep13: train_loss 0.2219  val_auc 0.605 pos_f1 0.347
+seed0| Ep14: train_loss 0.2201  val_auc 0.603 pos_f1 0.376
+seed0| Ep15: train_loss 0.2194  val_auc 0.605 pos_f1 0.369
+seed0| Ep16: train_loss 0.2172  val_auc 0.609 pos_f1 0.340
+seed0| Ep17: train_loss 0.2150  val_auc 0.610 pos_f1 0.385
+seed0| Ep18: train_loss 0.2134  val_auc 0.617 pos_f1 0.351
+seed0| Ep19: train_loss 0.2115  val_auc 0.614 pos_f1 0.350
+seed0| Ep20: train_loss 0.2098  val_auc 0.618 pos_f1 0.383
+seed0| Ep21: train_loss 0.2088  val_auc 0.624 pos_f1 0.380
+seed0| Ep22: train_loss 0.2073  val_auc 0.628 pos_f1 0.388
+seed0| Ep23: train_loss 0.2061  val_auc 0.626 pos_f1 0.361
+seed0| Ep24: train_loss 0.2045  val_auc 0.615 pos_f1 0.395
+seed0| Ep25: train_loss 0.2034  val_auc 0.631 pos_f1 0.348
+seed0| Ep26: train_loss 0.2015  val_auc 0.623 pos_f1 0.367
+seed0| Ep27: train_loss 0.1995  val_auc 0.626 pos_f1 0.352
+seed0| Ep28: train_loss 0.1994  val_auc 0.629 pos_f1 0.381
+seed0| Ep29: train_loss 0.1975  val_auc 0.635 pos_f1 0.389
+seed0| Ep30: train_loss 0.1961  val_auc 0.630 pos_f1 0.395
+seed0| Ep31: train_loss 0.1965  val_auc 0.635 pos_f1 0.362
+seed0| Ep32: train_loss 0.1944  val_auc 0.628 pos_f1 0.375
+seed0| Ep33: train_loss 0.1940  val_auc 0.633 pos_f1 0.373
+seed0| Ep34: train_loss 0.1931  val_auc 0.635 pos_f1 0.365
+seed0| Ep35: train_loss 0.1916  val_auc 0.620 pos_f1 0.366
+seed0| Ep36: train_loss 0.1907  val_auc 0.637 pos_f1 0.407
+seed0| Ep37: train_loss 0.1896  val_auc 0.641 pos_f1 0.368
+seed0| Ep38: train_loss 0.1894  val_auc 0.639 pos_f1 0.396
+seed0| Ep39: train_loss 0.1885  val_auc 0.636 pos_f1 0.395
+seed0| Ep40: train_loss 0.1868  val_auc 0.634 pos_f1 0.383
+seed0| Ep41: train_loss 0.1864  val_auc 0.642 pos_f1 0.412
+seed0| Ep42: train_loss 0.1857  val_auc 0.642 pos_f1 0.410
+seed0| Ep43: train_loss 0.1854  val_auc 0.644 pos_f1 0.379
+seed0| Ep44: train_loss 0.1840  val_auc 0.641 pos_f1 0.409
+seed0| Ep45: train_loss 0.1838  val_auc 0.643 pos_f1 0.404
+seed0| Ep46: train_loss 0.1815  val_auc 0.636 pos_f1 0.381
+seed0| Ep47: train_loss 0.1823  val_auc 0.640 pos_f1 0.387
+seed0| Ep48: train_loss 0.1813  val_auc 0.646 pos_f1 0.402
+seed0| Ep49: train_loss 0.1803  val_auc 0.655 pos_f1 0.389
+seed0| Ep50: train_loss 0.1802  val_auc 0.644 pos_f1 0.431
+seed0| Ep51: train_loss 0.1792  val_auc 0.651 pos_f1 0.403
+seed0| Ep52: train_loss 0.1779  val_auc 0.650 pos_f1 0.412
+seed0| Ep53: train_loss 0.1774  val_auc 0.650 pos_f1 0.389
+seed0| Ep54: train_loss 0.1767  val_auc 0.651 pos_f1 0.439
+seed0| Ep55: train_loss 0.1761  val_auc 0.649 pos_f1 0.390
+seed0| Ep56: train_loss 0.1757  val_auc 0.650 pos_f1 0.403
+seed0| Ep57: train_loss 0.1757  val_auc 0.646 pos_f1 0.398
+seed0| Ep58: train_loss 0.1740  val_auc 0.645 pos_f1 0.436
+seed0| Ep59: train_loss 0.1739  val_auc 0.651 pos_f1 0.399
+seed0| Ep60: train_loss 0.1730  val_auc 0.650 pos_f1 0.394
+seed0| Ep61: train_loss 0.1717  val_auc 0.642 pos_f1 0.397
+seed0| Ep62: train_loss 0.1726  val_auc 0.657 pos_f1 0.386
+seed0| Ep63: train_loss 0.1715  val_auc 0.644 pos_f1 0.406
+seed0| Ep64: train_loss 0.1712  val_auc 0.653 pos_f1 0.414
+seed0| Ep65: train_loss 0.1695  val_auc 0.654 pos_f1 0.408
+seed0| Ep66: train_loss 0.1702  val_auc 0.651 pos_f1 0.389
+seed0| Ep67: train_loss 0.1697  val_auc 0.659 pos_f1 0.432
+seed0| Ep68: train_loss 0.1685  val_auc 0.656 pos_f1 0.424
+seed0| Ep69: train_loss 0.1677  val_auc 0.652 pos_f1 0.439
+seed0| Ep70: train_loss 0.1682  val_auc 0.653 pos_f1 0.424
+seed0| Ep71: train_loss 0.1678  val_auc 0.653 pos_f1 0.418
+seed0| Ep72: train_loss 0.1664  val_auc 0.654 pos_f1 0.423
+seed0| Ep73: train_loss 0.1669  val_auc 0.664 pos_f1 0.453
+seed0| Ep74: train_loss 0.1671  val_auc 0.655 pos_f1 0.443
+seed0| Ep75: train_loss 0.1653  val_auc 0.651 pos_f1 0.411
+seed0| Ep76: train_loss 0.1642  val_auc 0.655 pos_f1 0.406
+seed0| Ep77: train_loss 0.1641  val_auc 0.665 pos_f1 0.425
+seed0| Ep78: train_loss 0.1643  val_auc 0.656 pos_f1 0.419
+seed0| Ep79: train_loss 0.1641  val_auc 0.656 pos_f1 0.435
+seed0| Ep80: train_loss 0.1635  val_auc 0.659 pos_f1 0.421
+seed0| Ep81: train_loss 0.1631  val_auc 0.662 pos_f1 0.404
+seed0| Ep82: train_loss 0.1622  val_auc 0.656 pos_f1 0.397
+seed0| Ep83: train_loss 0.1619  val_auc 0.655 pos_f1 0.421
+seed0| Ep84: train_loss 0.1615  val_auc 0.661 pos_f1 0.427
+seed0| Ep85: train_loss 0.1611  val_auc 0.660 pos_f1 0.421
+seed0| Ep86: train_loss 0.1615  val_auc 0.657 pos_f1 0.415
+seed0| Ep87: train_loss 0.1593  val_auc 0.660 pos_f1 0.439
+seed0| Ep88: train_loss 0.1597  val_auc 0.659 pos_f1 0.424
+seed0| Ep89: train_loss 0.1589  val_auc 0.664 pos_f1 0.438
+seed0| Ep90: train_loss 0.1585  val_auc 0.665 pos_f1 0.414
+seed0| Ep91: train_loss 0.1588  val_auc 0.663 pos_f1 0.434
+seed0| Ep92: train_loss 0.1592  val_auc 0.662 pos_f1 0.446
+Best model for seed 0 saved (val Positive F1: 0.453) (val AUC: 0.665)              precision    recall  f1-score   support
+
+         0.0      0.987     0.993     0.990    260976
+         1.0      0.678     0.512     0.583      7174
+
+    accuracy                          0.980    268150
+   macro avg      0.832     0.753     0.787    268150
+weighted avg      0.978     0.980     0.979    268150
