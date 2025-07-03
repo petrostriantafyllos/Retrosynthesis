@@ -574,7 +574,7 @@ def run_train(args):
         scheduler = lr_scheduler.ReduceLROnPlateau(opt, mode='max', 
                                                    factor=args.scheduler_factor, 
                                                    patience=args.scheduler_patience,
-                                                   verbose=True)
+                                                   verbose=False)
     elif args.scheduler_type == "CosineAnnealingLR":
         scheduler = lr_scheduler.CosineAnnealingLR(opt, T_max=args.epochs)
 
