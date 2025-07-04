@@ -1,0 +1,93 @@
+=== TEST ===
+ROC AUC 0.985  PR AUC 0.697  CountAcc 0.886
+Top-1 52.2%    Top-5 70.9%
+
+
+
+
+
+
+
+No extra global
+
+
+!python optuna_final.py \
+--csv data/dataSetB.csv \
+--hidden 256 \
+--layers 4 \
+--dropout 0.010301246078696754 \
+--lr 0.00099040204749014 \
+--lambda_count 0.6055301752465088 \
+--scheduler_type CosineAnnealingLR \
+--scheduler_t_max 37 \
+--epochs 50 \
+--early_stop 10 \
+--batch 32 \
+--seed 42
+
+
+
+
+
+
+
+========================================attempt2=============================================
+
+
+
+
+
+
+
+python optuna_final.py --csv data/dataSetB.csv --hidden 256 --layers 4 --dropout 0.010301246078696754 --lr 0.00099040204749014 --lambda_count 0.6055301752465088 --scheduler_type CosineAnnealingLR --scheduler_t_max 37 --epochs 50 --early_stop 10 --batch 32 --seed 42
+Processing...
+graphs: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 50000/50000 [02:03<00:00, 403.83it/s]
+Positive edge ratio in processed data = 2.68%
+Done!
+ep01  loss0.827  valAUPRC0.477
+ep02  loss0.632  valAUPRC0.529
+ep03  loss0.584  valAUPRC0.560
+ep04  loss0.551  valAUPRC0.574
+ep05  loss0.527  valAUPRC0.592
+ep06  loss0.505  valAUPRC0.605
+ep07  loss0.488  valAUPRC0.594
+ep08  loss0.473  valAUPRC0.614
+ep09  loss0.460  valAUPRC0.623
+ep10  loss0.443  valAUPRC0.635
+ep11  loss0.432  valAUPRC0.624
+ep12  loss0.417  valAUPRC0.639
+ep13  loss0.406  valAUPRC0.639
+ep14  loss0.393  valAUPRC0.648
+ep15  loss0.378  valAUPRC0.646
+ep16  loss0.366  valAUPRC0.648
+ep17  loss0.352  valAUPRC0.647
+ep18  loss0.341  valAUPRC0.658
+ep19  loss0.323  valAUPRC0.654
+ep20  loss0.310  valAUPRC0.659
+ep21  loss0.298  valAUPRC0.666
+ep22  loss0.286  valAUPRC0.656
+ep23  loss0.273  valAUPRC0.666
+ep24  loss0.259  valAUPRC0.667
+ep25  loss0.248  valAUPRC0.671
+ep26  loss0.237  valAUPRC0.667
+ep27  loss0.227  valAUPRC0.668
+ep28  loss0.216  valAUPRC0.671
+ep29  loss0.208  valAUPRC0.676
+ep30  loss0.200  valAUPRC0.668
+ep31  loss0.193  valAUPRC0.674
+ep32  loss0.187  valAUPRC0.675
+ep33  loss0.183  valAUPRC0.676
+ep34  loss0.180  valAUPRC0.676
+ep35  loss0.177  valAUPRC0.676
+ep36  loss0.175  valAUPRC0.676
+ep37  loss0.175  valAUPRC0.676
+ep38  loss0.174  valAUPRC0.676
+ep39  loss0.173  valAUPRC0.676
+ep40  loss0.174  valAUPRC0.676
+ep41  loss0.175  valAUPRC0.676
+ep42  loss0.176  valAUPRC0.673
+ep43  loss0.176  valAUPRC0.676
+
+=== TEST ===
+ROC AUC 0.985  PR AUC 0.695  CountAcc 0.887
+Top-1 52.4%    Top-5 71.1%
