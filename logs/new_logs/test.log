@@ -1,0 +1,4 @@
+optuna_enhanced_copy.py --lr 0.0005491824454587889 --hidden 256 --drop 0.17088887566049699 --layers 3 --lambda 0.5665524341505498 --scheduler_type ReduceLROnPlateau --scheduler_patience 7 --scheduler_factor 0.30152842214786135 --epochs 1 --name test
+ep01  loss0.841  valAUPRC0.457
+ROC AUC 0.968  PR AUC 0.466  CountAcc 0.848
+Top-1 43.1%    Top-3 64.9%    Top-5 68.9%    Top-10 70.4%
