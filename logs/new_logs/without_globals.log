@@ -1,0 +1,108 @@
+optuna_enhanced_copy.py --lr 0.0005491824454587889 --hidden 256 --drop 0.17088887566049699 --layers 3 --lambda 0.5665524341505498 --scheduler_type ReduceLROnPlateau --scheduler_patience 7 --scheduler_factor 0.30152842214786135 --epochs 1 --name without_globals --run-beam-search --no-multi-task
+ep01  loss0.887  valAUPRC0.380
+
+--- Beamsearch Accuracy Results ---
+Top-1 42.6%    Top-3 63.0%    Top-5 66.9%    Top-10 69.4%
+
+--- Multi-Task Accuracy Results ---
+Top-1 42.6%    Top-3 65.1%    Top-5 68.9%    Top-10 70.3%
+ROC AUC 0.962  PR AUC 0.396  CountAcc 0.854
+optuna_enhanced_copy.py --lr 0.0005491824454587889 --hidden 256 --drop 0.17088887566049699 --layers 3 --lambda 0.5665524341505498 --scheduler_type ReduceLROnPlateau --scheduler_patience 7 --scheduler_factor 0.30152842214786135 --epochs 100 --name without_globals --run-beam-search --no-multi-task
+ep01  loss0.887  valAUPRC0.380
+ep02  loss0.700  valAUPRC0.423
+ep03  loss0.651  valAUPRC0.453
+ep04  loss0.623  valAUPRC0.459
+ep05  loss0.603  valAUPRC0.470
+ep06  loss0.589  valAUPRC0.473
+ep07  loss0.574  valAUPRC0.486
+ep08  loss0.565  valAUPRC0.476
+ep09  loss0.552  valAUPRC0.496
+ep10  loss0.544  valAUPRC0.498
+ep11  loss0.536  valAUPRC0.505
+ep12  loss0.530  valAUPRC0.507
+ep13  loss0.523  valAUPRC0.509
+ep14  loss0.514  valAUPRC0.511
+ep15  loss0.511  valAUPRC0.507
+ep16  loss0.504  valAUPRC0.505
+ep17  loss0.500  valAUPRC0.512
+ep18  loss0.495  valAUPRC0.514
+ep19  loss0.491  valAUPRC0.514
+ep20  loss0.485  valAUPRC0.523
+ep21  loss0.480  valAUPRC0.519
+ep22  loss0.477  valAUPRC0.524
+ep23  loss0.473  valAUPRC0.527
+ep24  loss0.470  valAUPRC0.526
+ep25  loss0.467  valAUPRC0.531
+ep26  loss0.462  valAUPRC0.525
+ep27  loss0.460  valAUPRC0.528
+ep28  loss0.457  valAUPRC0.526
+ep29  loss0.451  valAUPRC0.528
+ep30  loss0.451  valAUPRC0.530
+ep31  loss0.449  valAUPRC0.532
+ep32  loss0.443  valAUPRC0.536
+ep33  loss0.443  valAUPRC0.534
+ep34  loss0.439  valAUPRC0.529
+ep35  loss0.438  valAUPRC0.531
+ep36  loss0.434  valAUPRC0.532
+ep37  loss0.433  valAUPRC0.536
+ep38  loss0.428  valAUPRC0.535
+ep39  loss0.428  valAUPRC0.534
+ep40  loss0.424  valAUPRC0.530
+ep41  loss0.422  valAUPRC0.529
+ep42  loss0.421  valAUPRC0.539
+ep43  loss0.415  valAUPRC0.535
+ep44  loss0.414  valAUPRC0.537
+ep45  loss0.415  valAUPRC0.530
+ep46  loss0.412  valAUPRC0.535
+ep47  loss0.410  valAUPRC0.541
+ep48  loss0.406  valAUPRC0.535
+ep49  loss0.405  valAUPRC0.536
+ep50  loss0.405  valAUPRC0.540
+ep51  loss0.400  valAUPRC0.537
+ep52  loss0.402  valAUPRC0.541
+ep53  loss0.402  valAUPRC0.540
+ep54  loss0.396  valAUPRC0.542
+ep55  loss0.399  valAUPRC0.542
+ep56  loss0.393  valAUPRC0.539
+ep57  loss0.393  valAUPRC0.547
+ep58  loss0.393  valAUPRC0.546
+ep59  loss0.389  valAUPRC0.541
+ep60  loss0.387  valAUPRC0.536
+ep61  loss0.385  valAUPRC0.546
+ep62  loss0.385  valAUPRC0.542
+ep63  loss0.383  valAUPRC0.535
+ep64  loss0.384  valAUPRC0.542
+ep65  loss0.381  valAUPRC0.535
+ep66  loss0.352  valAUPRC0.550
+ep67  loss0.344  valAUPRC0.551
+ep68  loss0.343  valAUPRC0.552
+ep69  loss0.339  valAUPRC0.551
+ep70  loss0.336  valAUPRC0.552
+ep71  loss0.336  valAUPRC0.552
+ep72  loss0.333  valAUPRC0.551
+ep73  loss0.332  valAUPRC0.553
+ep74  loss0.330  valAUPRC0.553
+ep75  loss0.328  valAUPRC0.552
+ep76  loss0.327  valAUPRC0.552
+ep77  loss0.328  valAUPRC0.550
+ep78  loss0.326  valAUPRC0.554
+ep79  loss0.325  valAUPRC0.557
+ep80  loss0.326  valAUPRC0.557
+ep81  loss0.324  valAUPRC0.556
+ep82  loss0.325  valAUPRC0.555
+ep83  loss0.323  valAUPRC0.548
+ep84  loss0.322  valAUPRC0.553
+ep85  loss0.320  valAUPRC0.552
+ep86  loss0.320  valAUPRC0.554
+ep87  loss0.318  valAUPRC0.554
+ep88  loss0.310  valAUPRC0.556
+ep89  loss0.309  valAUPRC0.556
+
+--- Beamsearch Accuracy Results ---
+Top-1 48.9%    Top-3 66.8%    Top-5 70.1%    Top-10 71.8%
+
+--- No Multi-Task Accuracy Results ---
+Top-1 49.0%    Top-3 67.8%    Top-5 69.9%    Top-10 70.5%
+
+--- Overall Results ---
+ROC AUC 0.979  PR AUC 0.570 

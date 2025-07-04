@@ -331,31 +331,38 @@ def topk_accuracy(ds,model,device,k:int)->float:
             top_prob_indices=probs_unique.argsort()[::-1] # Indices into unique_edges
 
             cand_sets=[]
-            seen_frozensets=set() # prevent duplicate candidate sets
 
-            if pred_n==1:
-                for idx_in_unique in top_prob_indices:
-                    bond = tuple(sorted(edges_unique[idx_in_unique]))
-                    current_set_frozen = frozenset({bond}) # Represents a set with one bond
-                    if current_set_frozen not in seen_frozensets:
-                        seen_frozensets.add(current_set_frozen)
-                        cand_sets.append(set(current_set_frozen)) # mutable set
-                        if len(cand_sets) >= k:
-                            break
-            else: # pred_n == 2
-                # Take top `pool_size` individual bonds to form pairs
-                pool_size = min(len(top_prob_indices), max(pred_n, 10)) # Consider at most 10 best individual bonds for pairs
-                
-                for i in range(pool_size):
-                    for j in range(i + 1, pool_size): # Ensure i < j for unique pairs from distinct individual bonds
-                        if len(cand_sets) >= k: break # Stop if we have k unique candidate sets
-                        bond1 = tuple(sorted(edges_unique[top_prob_indices[i]]))
-                        bond2 = tuple(sorted(edges_unique[top_prob_indices[j]]))
-                        s = frozenset({bond1, bond2})
-                        if s not in seen_frozensets:
-                            seen_frozensets.add(s)
-                            cand_sets.append(set(s)) # mutable set
-                    if len(cand_sets) >= k: break
+            if not args.no_multi_task:
+                seen_frozensets=set() # prevent duplicate candidate sets
+
+                if pred_n==1:
+                    for idx_in_unique in top_prob_indices:
+                        bond = tuple(sorted(edges_unique[idx_in_unique]))
+                        current_set_frozen = frozenset({bond}) # Represents a set with one bond
+                        if current_set_frozen not in seen_frozensets:
+                            seen_frozensets.add(current_set_frozen)
+                            cand_sets.append(set(current_set_frozen)) # mutable set
+                            if len(cand_sets) >= k:
+                                break
+                else: # pred_n == 2
+                    # Take top `pool_size` individual bonds to form pairs
+                    pool_size = min(len(top_prob_indices), max(pred_n, 10)) # Consider at most 10 best individual bonds for pairs
+                    
+                    for i in range(pool_size):
+                        for j in range(i + 1, pool_size): # Ensure i < j for unique pairs from distinct individual bonds
+                            if len(cand_sets) >= k: break # Stop if we have k unique candidate sets
+                            bond1 = tuple(sorted(edges_unique[top_prob_indices[i]]))
+                            bond2 = tuple(sorted(edges_unique[top_prob_indices[j]]))
+                            s = frozenset({bond1, bond2})
+                            if s not in seen_frozensets:
+                                seen_frozensets.add(s)
+                                cand_sets.append(set(s)) # mutable set
+                        if len(cand_sets) >= k: break
+            else:
+                for i in range(min(k, len(top_prob_indices))):
+                    bond_idx = top_prob_indices[i]
+                    bond = tuple(sorted(edges_unique[bond_idx]))
+                    cand_sets.append({bond}) # A set containing one bond
             
             true_set={tuple(sorted(t)) for t in g.true_break_bonds_atom_indices.cpu().numpy()}
             if any(cs==true_set for cs in cand_sets): correct+=1
@@ -563,6 +570,153 @@ def show_examples(model,ds_subset,dev,n=5,require_pos=False, folder='', title=""
             plt.savefig(f"{folder}/{title}-{shown}")
             shown+=1
 
+def run_beam_search_pipeline(model, loader, beam_size, device="cpu"):
+    """
+    Runs beam search inference on a dataset and returns structured results.
+    """
+    model.eval()
+    results = []
+    with torch.no_grad():
+        for i, data in enumerate(tqdm.tqdm(loader.dataset, desc="Beam Search")):
+            # The loader's dataset gives individual data objects.
+            # We need to manually create a batch for the model.
+            data = data.to(device)
+            data.batch = torch.zeros(data.num_nodes, dtype=torch.long, device=device)
+
+            bl,cl = model(data)
+            top_hypotheses = beam_search_bond_sets(bl, data.edge_index, beam_size=beam_size)
+            
+            # Get true bond breaks for comparison
+            true_bonds_mask = data.y.view(-1) == 1
+            true_bonds_indices = data.edge_index.t()[true_bonds_mask]
+            # Filter for unique bonds (i < j)
+            unique_true_bonds_mask = true_bonds_indices[:, 0] < true_bonds_indices[:, 1]
+            true_bonds = {tuple(bond.tolist()) for bond in true_bonds_indices[unique_true_bonds_mask]}
+
+            results.append({
+                "example_index": i,
+                "num_atoms": data.num_nodes,
+                "num_bonds": data.num_edges // 2,
+                "true_bonds": true_bonds,
+                "hypotheses": top_hypotheses
+            })
+    return results
+
+
+import itertools
+import torch.nn.functional as F
+
+def beam_search_bond_sets(logits: torch.Tensor, edge_index: torch.Tensor, beam_size: int = 5):
+    """
+    Performs a hypothesis search to find the most likely sets of bond breaks.
+
+    This is not a traditional sequence-decoding beam search, but a search
+    for the best set of bond cleavages.
+
+    Args:
+        logits (torch.Tensor): The raw output logits from the model for each edge.
+        edge_index (torch.Tensor): The edge_index of the graph.
+        beam_size (int): The number of top hypotheses to return.
+
+    Returns:
+        A list of tuples, where each tuple contains (score, bond_indices).
+        The list is sorted by score in descending order.
+    """
+    # Use logsigmoid to get log probabilities, which are numerically stable
+    log_probs = F.logsigmoid(logits.squeeze())
+
+    # --- Step 1: Handle undirected edges ---
+    # We only want to consider each bond once (e.g., i->j, not j->i)
+    # The mask ensures we only look at edges where source index < target index
+    mask = edge_index[0] < edge_index[1]
+    # unique_edge_indices = torch.arange(len(logits))[mask]
+    unique_log_probs = log_probs[mask]
+
+    # Get the original bond indices (i, j) for easier interpretation
+    bonds = edge_index.t()[mask]
+
+    # --- Step 2: Generate single-bond hypotheses ---
+    # Sort all unique bonds by their log probability
+    sorted_indices = torch.argsort(unique_log_probs, descending=True)
+
+    hypotheses = []
+    # Add the top `beam_size` single bonds as initial hypotheses
+    for i in range(min(beam_size, len(sorted_indices))):
+        idx = sorted_indices[i]
+        score = unique_log_probs[idx].item()
+        bond_tuple = tuple(bonds[idx].tolist())
+        hypotheses.append((score, {bond_tuple})) # Store hypothesis as a set of bonds
+
+    # --- Step 3: Generate double-bond hypotheses ---
+    # Consider combinations of the top N bonds to create double-break hypotheses
+    # Let's use a slightly larger pool (e.g., 2*beam_size) for combinations
+    pool_size = min(2 * beam_size, len(sorted_indices))
+    top_bond_pool_indices = sorted_indices[:pool_size]
+
+    for combo in itertools.combinations(top_bond_pool_indices, 2):
+        idx1, idx2 = combo
+        # Score is the sum of log probabilities
+        score = (unique_log_probs[idx1] + unique_log_probs[idx2]).item()
+        bond1_tuple = tuple(bonds[idx1].tolist())
+        bond2_tuple = tuple(bonds[idx2].tolist())
+        hypotheses.append((score, {bond1_tuple, bond2_tuple}))
+
+    # --- Step 4: Rank all hypotheses and return the best ones ---
+    hypotheses.sort(key=lambda x: x[0], reverse=True)
+
+    return hypotheses[:beam_size]
+
+def calculate_accuracies(beam_results):
+    """
+    Calculates and prints top-1, top-3, and top-5 accuracies.
+    """
+    top1_correct = 0
+    top3_correct = 0
+    top5_correct = 0
+    top10_correct = 0
+    total_examples = len(beam_results)
+
+    if total_examples == 0:
+        print("Cannot calculate accuracy. The 'beam_results' list is empty.")
+        return
+
+    for res in beam_results:
+        # Ensure true_bonds is a set for order-agnostic comparison
+        true_bonds = (res['true_bonds'])
+        
+        # Extract the bond sets from the top 5 hypotheses
+        # The `set(h[1])` ensures the predicted bonds are also treated as a set
+        top10_hypotheses = [set(h[1]) for h in res['hypotheses'][:10]]
+
+        # Check if the true bond set is in the top-k predictions
+        # This implementation is cumulative. A top-1 match is also a top-3 and top-5 match.
+        if true_bonds in top10_hypotheses:
+            top10_correct+=1
+            if true_bonds in top10_hypotheses[:5]:
+                top5_correct += 1
+                if true_bonds in top10_hypotheses[:3]:
+                    top3_correct += 1
+                    if true_bonds == top10_hypotheses[0]:
+                        top1_correct += 1
+    
+    # Calculate and print the final accuracies
+    top1_acc = (top1_correct / total_examples) * 100
+    top3_acc = (top3_correct / total_examples) * 100
+    top5_acc = (top5_correct / total_examples) * 100
+    top10_acc = (top10_correct / total_examples) * 100
+
+    log = f"\n--- Beamsearch Accuracy Results ---"
+    log += f"\nTop-1 {top1_acc:.1f}%    Top-3 {top3_acc:.1f}%    Top-5 {top5_acc:.1f}%    Top-10 {top10_acc:.1f}%"
+    print(log)
+    write_log(log_file,log)
+
+    # print(f"\n--- Beamsearch Accuracy Results ---")
+    # print(f"Evaluated on {total_examples} examples.")
+    # print(f"Top-1 Accuracy: {top1_acc:.2f}% ({top1_correct}/{total_examples})")
+    # print(f"Top-3 Accuracy: {top3_acc:.2f}% ({top3_correct}/{total_examples})")
+    # print(f"Top-5 Accuracy: {top5_acc:.2f}% ({top5_correct}/{total_examples})")
+    # print(f"Top-10 Accuracy: {top10_acc:.2f}% ({top10_correct}/{total_examples})")
+
 # ---------------------------------------------------------------------------
 # 8.  Run modes
 # ---------------------------------------------------------------------------
@@ -642,13 +796,29 @@ def run_train(args):
     Path(fig_folder).mkdir(parents=True, exist_ok=True)
     res=eval_model(model,lte,dev)
     t1=topk_accuracy(te,model,dev,1); t3=topk_accuracy(te,model,dev,3); t5=topk_accuracy(te,model,dev,5); t10=topk_accuracy(te,model,dev,10)
+
+    if args.run_beam_search:
+        print("\n" + "="*50)
+        print("RUNNING BEAM SEARCH PIPELINE (on first ensemble model)")
+        print("="*50)
+
+        global beam_results
+        beam_results = run_beam_search_pipeline(model, lte, args.beam_size, device=dev)
+
+        calculate_accuracies(beam_results)
+
+
+
     print("\n=== TEST ===")
 
-    log = f"ROC AUC {res['roc']:.3f}  PR AUC {res['auprc']:.3f}  CountAcc {res['count_acc']:.3f}"
+
+    log = f"\n--- Multi-Task Accuracy Results ---"
+    log += f"\nTop-1 {t1*100:.1f}%    Top-3 {t3*100:.1f}%    Top-5 {t5*100:.1f}%    Top-10 {t10*100:.1f}%"
     print(log)
     write_log(log_file,log)
 
-    log = f"Top-1 {t1*100:.1f}%    Top-3 {t3*100:.1f}%    Top-5 {t5*100:.1f}%    Top-10 {t10*100:.1f}%"
+    log= f"\n--- Overall Results ---"
+    log += f"\nROC AUC {res['roc']:.3f}  PR AUC {res['auprc']:.3f}  CountAcc {res['count_acc']:.3f}"
     print(log)
     write_log(log_file,log)
 
@@ -698,6 +868,7 @@ if __name__=="__main__":
     ap.add_argument("--early_stop",type=int,default=10, help="Patience for early stopping based on validation AUPRC.")
     ap.add_argument("--seed",type=int,default=42, help="Random seed for reproducibility.")
     ap.add_argument("--no-train", action="store_true", help="Skip training.")
+    ap.add_argument("--no-multi-task", action="store_true", help="Skip multi-task evaluation.")
 
     # hyper-params for direct training
     ap.add_argument("--hidden",type=int,default=128, help="Hidden dimension of the GNN layers.")
@@ -718,6 +889,10 @@ if __name__=="__main__":
                     help="Factor by which to reduce LR for ReduceLROnPlateau scheduler.")
     # T_max for CosineAnnealingLR will be set to --epochs in run_train for simplicity.
 
+
+    ap.add_argument("--run-beam-search", action="store_true", help="Run Beam Search on the first ensemble model.")
+    ap.add_argument("--beam-size", type=int, default=10, help="Beam size for hypothesis search")
+
     # HPO
     ap.add_argument("--hpo",action="store_true", help="Run Optuna Hyperparameter Optimization.")
     ap.add_argument("--n_trials",type=int,default=40, help="Number of trials for Optuna HPO.")
@@ -728,3 +903,5 @@ if __name__=="__main__":
 
     if args.hpo: run_hpo(args)
     else:         run_train(args)
+
+    
