@@ -1,0 +1,1 @@
+--lr 0.0005491824454587889 --hidden 256 --drop 0.17088887566049699 --layers 3 --lambda 0.5665524341505498 --scheduler_type ReduceLROnPlateau --scheduler_patience 7 --scheduler_factor 0.30152842214786135
