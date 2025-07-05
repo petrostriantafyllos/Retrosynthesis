@@ -307,7 +307,7 @@ def eval_model(model,loader,device,bond_loss=None,λ=0)->Dict:
         auprc=average_precision_score(y,p),
         count_acc=(ct==cp).mean(),
         y_true=y, y_score=p, count_true=ct, count_pred=cp,
-        loss=loss 
+        loss=loss if bond_loss else None
     )
 
 # molecule-level
