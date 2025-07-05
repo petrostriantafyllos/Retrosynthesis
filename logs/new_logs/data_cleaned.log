@@ -1,0 +1,116 @@
+optuna_enhanced_copy.py --lr 0.0005491824454587889 --hidden 256 --drop 0.17088887566049699 --layers 3 --lambda 0.5665524341505498 --scheduler_type ReduceLROnPlateau --scheduler_patience 7 --scheduler_factor 0.30152842214786135 --epochs 100 --name data_cleaned
+optuna_enhanced_copy.py --lr 0.0005491824454587889 --hidden 256 --drop 0.17088887566049699 --layers 3 --lambda 0.5665524341505498 --scheduler_type ReduceLROnPlateau --scheduler_patience 7 --scheduler_factor 0.30152842214786135 --epochs 100 --name data_cleaned
+optuna_enhanced_copy.py --lr 0.0005491824454587889 --hidden 256 --drop 0.17088887566049699 --layers 3 --lambda 0.5665524341505498 --scheduler_type ReduceLROnPlateau --scheduler_patience 7 --scheduler_factor 0.30152842214786135 --epochs 100 --name data_cleaned
+optuna_enhanced_copy.py --lr 0.0005491824454587889 --hidden 256 --drop 0.17088887566049699 --layers 3 --lambda 0.5665524341505498 --scheduler_type ReduceLROnPlateau --scheduler_patience 7 --scheduler_factor 0.30152842214786135 --epochs 100 --name data_cleaned
+optuna_enhanced_copy.py --lr 0.0005491824454587889 --hidden 256 --drop 0.17088887566049699 --layers 3 --lambda 0.5665524341505498 --scheduler_type ReduceLROnPlateau --scheduler_patience 7 --scheduler_factor 0.30152842214786135 --epochs 100 --name data_cleaned
+optuna_enhanced_copy.py --lr 0.0005491824454587889 --hidden 256 --drop 0.17088887566049699 --layers 3 --lambda 0.5665524341505498 --scheduler_type ReduceLROnPlateau --scheduler_patience 7 --scheduler_factor 0.30152842214786135 --epochs 100 --name data_cleaned
+optuna_enhanced_copy.py --lr 0.0005491824454587889 --hidden 256 --drop 0.17088887566049699 --layers 3 --lambda 0.5665524341505498 --scheduler_type ReduceLROnPlateau --scheduler_patience 7 --scheduler_factor 0.30152842214786135 --epochs 100 --name data_cleaned
+optuna_enhanced_copy.py --lr 0.0005491824454587889 --hidden 256 --drop 0.17088887566049699 --layers 3 --lambda 0.5665524341505498 --scheduler_type ReduceLROnPlateau --scheduler_patience 7 --scheduler_factor 0.30152842214786135 --epochs 100 --name data_cleaned
+optuna_enhanced_copy.py --lr 0.0005491824454587889 --hidden 256 --drop 0.17088887566049699 --layers 3 --lambda 0.5665524341505498 --scheduler_type ReduceLROnPlateau --scheduler_patience 7 --scheduler_factor 0.30152842214786135 --epochs 100 --name data_cleaned
+optuna_enhanced_copy.py --lr 0.0005491824454587889 --hidden 256 --drop 0.17088887566049699 --layers 3 --lambda 0.5665524341505498 --scheduler_type ReduceLROnPlateau --scheduler_patience 7 --scheduler_factor 0.30152842214786135 --epochs 100 --name data_cleaned
+ep01  loss0.832  valAUPRC0.454
+ep02  loss0.638  valAUPRC0.520
+ep03  loss0.591  valAUPRC0.547
+ep04  loss0.563  valAUPRC0.567
+ep05  loss0.542  valAUPRC0.571
+ep06  loss0.526  valAUPRC0.585
+ep07  loss0.511  valAUPRC0.603
+ep08  loss0.500  valAUPRC0.608
+ep09  loss0.487  valAUPRC0.616
+ep10  loss0.480  valAUPRC0.620
+ep11  loss0.472  valAUPRC0.632
+ep12  loss0.464  valAUPRC0.629
+ep13  loss0.454  valAUPRC0.640
+ep14  loss0.450  valAUPRC0.638
+ep15  loss0.440  valAUPRC0.647
+ep16  loss0.435  valAUPRC0.653
+ep17  loss0.431  valAUPRC0.649
+ep18  loss0.426  valAUPRC0.651
+ep19  loss0.421  valAUPRC0.657
+ep20  loss0.414  valAUPRC0.658
+ep21  loss0.410  valAUPRC0.656
+ep22  loss0.406  valAUPRC0.654
+ep23  loss0.399  valAUPRC0.669
+ep24  loss0.399  valAUPRC0.663
+ep25  loss0.393  valAUPRC0.670
+ep26  loss0.388  valAUPRC0.668
+ep27  loss0.383  valAUPRC0.671
+ep28  loss0.382  valAUPRC0.670
+ep29  loss0.379  valAUPRC0.671
+ep30  loss0.374  valAUPRC0.668
+ep31  loss0.371  valAUPRC0.673
+ep32  loss0.369  valAUPRC0.671
+ep33  loss0.364  valAUPRC0.673
+ep34  loss0.359  valAUPRC0.671
+ep35  loss0.358  valAUPRC0.673
+ep36  loss0.356  valAUPRC0.677
+ep37  loss0.355  valAUPRC0.675
+ep38  loss0.352  valAUPRC0.674
+ep39  loss0.349  valAUPRC0.668
+ep40  loss0.345  valAUPRC0.683
+ep41  loss0.342  valAUPRC0.683
+ep42  loss0.338  valAUPRC0.684
+ep43  loss0.338  valAUPRC0.676
+ep44  loss0.335  valAUPRC0.686
+ep45  loss0.331  valAUPRC0.682
+ep46  loss0.328  valAUPRC0.687
+ep47  loss0.326  valAUPRC0.684
+ep48  loss0.325  valAUPRC0.682
+ep49  loss0.325  valAUPRC0.690
+ep50  loss0.323  valAUPRC0.689
+ep51  loss0.316  valAUPRC0.695
+ep52  loss0.320  valAUPRC0.688
+ep53  loss0.318  valAUPRC0.690
+ep54  loss0.314  valAUPRC0.682
+ep55  loss0.310  valAUPRC0.685
+ep56  loss0.310  valAUPRC0.691
+ep57  loss0.307  valAUPRC0.695
+ep58  loss0.306  valAUPRC0.687
+ep59  loss0.307  valAUPRC0.694
+ep60  loss0.303  valAUPRC0.690
+ep61  loss0.301  valAUPRC0.692
+ep62  loss0.304  valAUPRC0.692
+ep63  loss0.297  valAUPRC0.693
+ep64  loss0.296  valAUPRC0.694
+ep65  loss0.294  valAUPRC0.700
+ep66  loss0.297  valAUPRC0.689
+ep67  loss0.290  valAUPRC0.702
+ep68  loss0.289  valAUPRC0.695
+ep69  loss0.289  valAUPRC0.697
+ep70  loss0.288  valAUPRC0.693
+ep71  loss0.288  valAUPRC0.701
+ep72  loss0.286  valAUPRC0.697
+ep73  loss0.283  valAUPRC0.698
+ep74  loss0.282  valAUPRC0.703
+ep75  loss0.286  valAUPRC0.701
+ep76  loss0.278  valAUPRC0.693
+ep77  loss0.278  valAUPRC0.694
+ep78  loss0.278  valAUPRC0.703
+ep79  loss0.273  valAUPRC0.700
+ep80  loss0.278  valAUPRC0.690
+ep81  loss0.274  valAUPRC0.699
+ep82  loss0.275  valAUPRC0.696
+ep83  loss0.246  valAUPRC0.711
+ep84  loss0.237  valAUPRC0.708
+ep85  loss0.231  valAUPRC0.712
+ep86  loss0.227  valAUPRC0.711
+ep87  loss0.229  valAUPRC0.711
+ep88  loss0.226  valAUPRC0.714
+ep89  loss0.224  valAUPRC0.713
+ep90  loss0.223  valAUPRC0.715
+ep91  loss0.220  valAUPRC0.713
+ep92  loss0.220  valAUPRC0.715
+ep93  loss0.222  valAUPRC0.715
+ep94  loss0.219  valAUPRC0.717
+ep95  loss0.218  valAUPRC0.714
+ep96  loss0.215  valAUPRC0.715
+ep97  loss0.214  valAUPRC0.714
+ep98  loss0.216  valAUPRC0.713
+ep99  loss0.215  valAUPRC0.712
+ep100  loss0.214  valAUPRC0.714
+
+--- Multi-Task Accuracy Results ---
+Top-1 51.5%    Top-3 69.1%    Top-5 70.7%    Top-10 71.1%
+
+--- Overall Results ---
+ROC AUC 0.988  PR AUC 0.718  CountAcc 0.881
