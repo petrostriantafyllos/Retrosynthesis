@@ -136,7 +136,10 @@ def _row_to_pair(row):
         left,right = row["rxnSmiles_Mapping_NameRxn"].split(">>")
         idx=[int(i) for i in re.findall(r"\d+",row["reactantSet_NameRxn"])]
         rcts=[left.split(".")[i] for i in idx]
-        prod=right.split(".")[0]
+        prods= right.split(".")
+        if(len(prods)>1):
+            return None
+        prod=prods[0]
         r_mols=[Chem.MolFromSmiles(s) for s in rcts]
         p_mol=Chem.MolFromSmiles(prod)
         if any(m is None for m in r_mols) or p_mol is None:
@@ -160,7 +163,12 @@ class CentreDataset(InMemoryDataset):
     def _parse_pairs(self):
         rows=list(csv.DictReader(open(self.csv_path)))
         pairs=Parallel(n_jobs=self.jobs)(delayed(_row_to_pair)(r) for r in rows)
-        return [p for p in pairs if p]
+        i=0
+        for p in pairs:
+            if p is not None:
+                i+=1
+        print(i)
+        return [p for p in pairs if p is not None]
     def process(self):
         pairs=self._parse_pairs()
         graphs=Parallel(n_jobs=self.jobs,backend="multiprocessing",batch_size=128)(
@@ -198,15 +206,15 @@ class BondHead(nn.Module):
     def __init__(self,hidden:int,edge_dim:int,drop:float):
         super().__init__()
         self.mlp=nn.Sequential(
-            nn.Linear(hidden*2+edge_dim,128), nn.ReLU(),
+            nn.Linear(hidden*4+edge_dim,128), nn.ReLU(),
             nn.Dropout(drop), nn.Linear(128,1)
         )
     def forward(self,h,ei,ea,batch):
         s,t = ei
-        # g_mean = global_mean_pool(h, batch)[batch[s]]
-        # g_max  = global_max_pool(h, batch)[batch[s]]
-        # g      = torch.cat([g_mean, g_max], dim=-1)
-        return self.mlp(torch.cat([h[s],h[t],ea],-1)).squeeze(-1)
+        g_mean = global_mean_pool(h, batch)[batch[s]]
+        g_max  = global_max_pool(h, batch)[batch[s]]
+        g      = torch.cat([g_mean, g_max], dim=-1)
+        return self.mlp(torch.cat([h[s],h[t],ea,g],-1)).squeeze(-1)
 
 class GNN(nn.Module):
     def __init__(self,node_dim:int,edge_dim:int,
@@ -215,7 +223,7 @@ class GNN(nn.Module):
         self.enc = Encoder(node_dim,edge_dim,hidden,drop,layers)
         self.bond= BondHead(hidden,edge_dim,drop)
         self.count=nn.Sequential(
-            nn.Linear(hidden*2,hidden//2), nn.ReLU(), nn.Linear(hidden//2,3) # Output for 0, 1, 2 breaks
+            nn.Linear(hidden*2,hidden//2), nn.ReLU(), nn.Dropout(drop), nn.Linear(hidden//2,3) # Output for 0, 1, 2 breaks
         )
     def forward(self,data:Data):
         h=self.enc(data.x,data.edge_index,data.edge_attr)
@@ -278,12 +286,14 @@ def train_one(model,loader,opt,bond_loss,λ,device):
     return tot/len(loader.dataset)
 
 @torch.no_grad()
-def eval_model(model,loader,device)->Dict:
+def eval_model(model,loader,device,bond_loss=None,λ=0)->Dict:
     model.eval()
     ys,ps,ct,cp=[],[],[],[]
     for b in loader:
         b=b.to(device)
         bl,cl=model(b)
+        if bond_loss:
+            loss  = bond_loss(bl,b.y.view(-1)) + λ*F.cross_entropy(cl,b.n_breaks.view(-1))
         ys.append(b.y.view(-1).cpu().numpy())
         ps.append(torch.sigmoid(bl).cpu().numpy())
         ct.append(b.n_breaks.cpu().numpy());  
@@ -296,7 +306,8 @@ def eval_model(model,loader,device)->Dict:
         roc=roc_auc_score(y,p),
         auprc=average_precision_score(y,p),
         count_acc=(ct==cp).mean(),
-        y_true=y, y_score=p, count_true=ct, count_pred=cp
+        y_true=y, y_score=p, count_true=ct, count_pred=cp,
+        loss=loss 
     )
 
 # molecule-level
@@ -766,9 +777,9 @@ def run_train(args):
         best=0; patience=0; best_state=None
         for ep in range(1,args.epochs+1):
             tl=train_one(model,ltr,opt,bond_loss,args.lambda_count,dev)
-            m=eval_model(model,lva,dev)
+            m=eval_model(model,lva,dev,bond_loss,args.lambda_count)
 
-            log = f"ep{ep:02d}  loss{tl:.3f}  valAUPRC{m['auprc']:.3f}"
+            log = f"ep{ep:02d}  train_loss{tl:.3f} valLoss{m['loss']:.3f}  valAUPRC{m['auprc']:.3f}"
             print(log)
             write_log(log_file,log)
             
