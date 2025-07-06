@@ -527,7 +527,7 @@ def show_examples(model,ds_subset,dev,n=5,require_pos=False, folder='', title=""
             shown+=1
 
 # ---------------------------------------------------------------------------
-# 8.  Beam Search and Analysis (NEW/MODIFIED)
+# 8.  Beam Search and Analysis
 # ---------------------------------------------------------------------------
 def beam_search_bond_sets(bond_logits: torch.Tensor,
                           edge_index: torch.Tensor,

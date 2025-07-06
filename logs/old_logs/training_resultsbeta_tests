@@ -1,8 +1,0 @@
-parallel_script_copy.py --csv data/dataSetB.csv --focal --epochs 100 --hidden 256 --batch 64 --beta 1.0 --name beta_tests --no_train              precision    recall  f1-score   support
-
-         0.0      0.993     0.986     0.989    260976
-         1.0      0.592     0.731     0.655      7174
-
-    accuracy                          0.979    268150
-   macro avg      0.793     0.859     0.822    268150
-weighted avg      0.982     0.979     0.980    268150
