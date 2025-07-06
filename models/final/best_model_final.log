@@ -1,0 +1,76 @@
+optuna_enhanced_copy.py --csv data/dataSetB.csv --hidden 128 --layers 2 --dropout 0.2 --lr 0.00099040204749014 --lambda_count 0.5665524341505498 --scheduler_type CosineAnnealingLR --epochs 25 --early_stop 8 --batch 32 --seed 42 --run-beam-search --name best_of_the_best
+ep01  train_loss0.884 valLoss0.568  valAUPRC0.432
+ep02  train_loss0.688 valLoss0.480  valAUPRC0.478
+ep03  train_loss0.642 valLoss0.400  valAUPRC0.522
+ep04  train_loss0.615 valLoss0.509  valAUPRC0.535
+ep05  train_loss0.595 valLoss0.484  valAUPRC0.547
+ep06  train_loss0.580 valLoss0.477  valAUPRC0.564
+ep07  train_loss0.568 valLoss0.438  valAUPRC0.562
+ep08  train_loss0.557 valLoss0.431  valAUPRC0.580
+ep09  train_loss0.547 valLoss0.454  valAUPRC0.578
+ep10  train_loss0.540 valLoss0.479  valAUPRC0.587
+ep11  train_loss0.532 valLoss0.475  valAUPRC0.591
+ep12  train_loss0.528 valLoss0.464  valAUPRC0.597
+ep13  train_loss0.515 valLoss0.473  valAUPRC0.603
+ep14  train_loss0.513 valLoss0.507  valAUPRC0.602
+ep15  train_loss0.505 valLoss0.518  valAUPRC0.608
+ep16  train_loss0.502 valLoss0.498  valAUPRC0.611
+ep17  train_loss0.496 valLoss0.489  valAUPRC0.614
+ep18  train_loss0.494 valLoss0.511  valAUPRC0.614
+ep19  train_loss0.487 valLoss0.458  valAUPRC0.620
+ep20  train_loss0.483 valLoss0.494  valAUPRC0.620
+ep21  train_loss0.483 valLoss0.502  valAUPRC0.623
+ep22  train_loss0.478 valLoss0.493  valAUPRC0.623
+ep23  train_loss0.478 valLoss0.485  valAUPRC0.624
+ep24  train_loss0.475 valLoss0.489  valAUPRC0.624
+ep25  train_loss0.475 valLoss0.489  valAUPRC0.624
+
+--- Beamsearch Accuracy Results ---
+Top-1 46.6%    Top-3 64.2%    Top-5 68.6%    Top-10 71.1%
+
+--- Multi-Task Accuracy Results ---
+Top-1 46.9%    Top-3 67.8%    Top-5 70.2%    Top-10 70.9%
+
+--- Overall Results ---
+ROC AUC 0.983  PR AUC 0.632  CountAcc 0.870
+optuna_beam.py --csv data/dataSetB.csv --hidden 128 --layers 2 --dropout 0.2 --lr 0.00099040204749014 --lambda_count 0.5665524341505498 --scheduler_type CosineAnnealingLR --epochs 25 --early_stop 8 --batch 32 --seed 42 --run-beam-search --name best_of_the_best
+ep01  train_loss0.883 valLoss0.741  valAUPRC0.427
+ep02  train_loss0.687 valLoss0.655  valAUPRC0.474
+ep03  train_loss0.641 valLoss0.610  valAUPRC0.507
+ep04  train_loss0.617 valLoss0.621  valAUPRC0.526
+ep05  train_loss0.594 valLoss0.609  valAUPRC0.544
+ep06  train_loss0.579 valLoss0.573  valAUPRC0.564
+ep07  train_loss0.566 valLoss0.560  valAUPRC0.567
+ep08  train_loss0.553 valLoss0.556  valAUPRC0.581
+ep09  train_loss0.544 valLoss0.545  valAUPRC0.578
+ep10  train_loss0.536 valLoss0.562  valAUPRC0.587
+ep11  train_loss0.528 valLoss0.549  valAUPRC0.591
+ep12  train_loss0.524 valLoss0.550  valAUPRC0.594
+ep13  train_loss0.512 valLoss0.526  valAUPRC0.606
+ep14  train_loss0.508 valLoss0.528  valAUPRC0.607
+ep15  train_loss0.502 valLoss0.528  valAUPRC0.604
+ep16  train_loss0.496 valLoss0.527  valAUPRC0.607
+ep17  train_loss0.490 valLoss0.517  valAUPRC0.611
+ep18  train_loss0.490 valLoss0.522  valAUPRC0.612
+ep19  train_loss0.483 valLoss0.521  valAUPRC0.619
+ep20  train_loss0.480 valLoss0.517  valAUPRC0.619
+ep21  train_loss0.477 valLoss0.514  valAUPRC0.623
+ep22  train_loss0.474 valLoss0.516  valAUPRC0.622
+ep23  train_loss0.473 valLoss0.514  valAUPRC0.623
+ep24  train_loss0.471 valLoss0.514  valAUPRC0.623
+ep25  train_loss0.472 valLoss0.514  valAUPRC0.623
+
+--- Multi-Task Accuracy Results (Count-Head Gated) ---
+Top-1 47.0%   Top-3 68.0%   Top-5 70.2%   Top-10 71.0%
+
+--- Beamsearch Accuracy Results ---
+Top-1 64.9%   Top-3 91.5%   Top-5 95.8%   Top-10 98.4%
+
+--- Head Disagreement Analysis ---
+Heads disagreed on break count in 19/4824 (0.4%) of examples.
+In cases of disagreement, the beam search corrected an incorrect count head to get the Top-1 result right 9 times.
+This represents a correction rate of 47.4% for all disagreements.
+Conversely, the count head's size prediction was correct while the beam search's top choice was wrong in 9 of the disagreements.
+
+--- Overall Bond-Level Results ---
+ROC AUC 0.984  PR AUC 0.636  CountAcc 0.872
